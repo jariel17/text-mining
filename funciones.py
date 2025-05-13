@@ -8,6 +8,10 @@ from nltk.tokenize import word_tokenize
 from nltk.stem import WordNetLemmatizer
 from nltk import pos_tag
 
+from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
+import seaborn as sns
+import matplotlib.pyplot as plt
+
 
 #nltk.download('stopwords')
 #nltk.download('wordnet')
@@ -55,3 +59,18 @@ def lemmatize(tokens):
         ]
     )
     return lemmas
+
+def evaluate_model(name, y_true, y_pred):
+    print(f"\n{name} - Evaluation Metrics\n" + "-"*40)
+    print("Accuracy:", round(accuracy_score(y_true, y_pred), 4))
+    print("\nClassification Report:")
+    print(classification_report(y_true, y_pred, target_names=["ham", "spam"]))
+
+    cm = confusion_matrix(y_true, y_pred)
+    plt.figure(figsize=(5,4))
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=["ham", "spam"], yticklabels=["ham", "spam"])
+    plt.title(f"{name} - Confusion Matrix")
+    plt.xlabel("Predicted Label")
+    plt.ylabel("True Label")
+    plt.tight_layout()
+    plt.show()
