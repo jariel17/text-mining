@@ -33,7 +33,6 @@ def translate_pos(tag):
         return wordnet.NOUN
 
 def preprocess(text):
-    
     stop_words = set(stopwords.words('english'))
     borra_caracteres = str.maketrans('', '', string.punctuation)
 
@@ -59,6 +58,65 @@ def lemmatize(tokens):
         ]
     )
     return lemmas
+
+def common_words(series: pd.Series, top_n: int = 20) -> None:
+
+    all_words = series.explode()
+
+    # Obtenemos la frecuencia de cada palabra
+    word_counts = (
+        all_words
+        .value_counts()
+        .head(top_n)
+        .rename_axis('word')
+        .reset_index(name='count')
+    )
+
+    # Graficamos las palabras más comunes
+    plt.figure(figsize=(10, 6))
+    sns.barplot(x='count', y='word', data=word_counts)
+    plt.title(f"Top {top_n} Palabras Más Comunes")
+    plt.xlabel('Conteo')
+    plt.ylabel('Palabra')
+    plt.show()
+
+def common_words_by_label(df, col: str, top_n: int = 20) -> None:
+    # Filtramos los datos por etiqueta
+    ham_words = df[df['label'] == 'ham'][col].explode()
+    spam_words = df[df['label'] == 'spam'][col].explode()
+
+    # Obtenemos la frecuencia de cada palabra
+    ham_word_counts = (
+        ham_words
+        .value_counts()
+        .head(top_n)
+        .rename_axis('word')
+        .reset_index(name='count')
+    )
+    spam_word_counts = (
+        spam_words
+        .value_counts()
+        .head(top_n)
+        .rename_axis('word')
+        .reset_index(name='count')
+    )
+
+    # Graficamos las palabras más comunes
+    fig, axes = plt.subplots(1, 2, figsize=(15, 6))
+    sns.barplot(x='count', y='word', data=ham_word_counts, ax=axes[0])
+    axes[0].set_title(f"Top {top_n} Palabras Más Comunes en Ham")
+    axes[0].set_xlabel('Conteo')
+    axes[0].set_ylabel('Palabra')
+
+    sns.barplot(x='count', y='word', data=spam_word_counts, ax=axes[1])
+    axes[1].set_title(f"Top {top_n} Palabras Más Comunes en Spam")
+    axes[1].set_xlabel('Conteo')
+    axes[1].set_ylabel('Palabra')
+
+    plt.tight_layout()
+    plt.show()
+
+
 
 def evaluate_model(name, y_true, y_pred):
     print(f"\n{name} - Evaluation Metrics\n" + "-"*40)
