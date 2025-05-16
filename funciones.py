@@ -117,6 +117,28 @@ def common_words_by_label(df, col: str, top_n: int = 20) -> None:
     plt.show()
 
 
+def confusion_matrix_plot(y_test, y_pred) -> None:
+    cm = confusion_matrix(y_test, y_pred)
+
+    plt.figure(figsize=(6, 5))
+    sns.heatmap(cm, 
+            annot=True, 
+            fmt='d', 
+            cmap='Blues',
+            xticklabels=['Ham', 'Spam'],
+            yticklabels=['Ham', 'Spam'])
+
+    # Añadir detalles
+    plt.title('Matriz de Confusión', fontsize=14)
+    plt.xlabel('Predicción', fontsize=12)
+    plt.ylabel('Real', fontsize=12)
+    plt.xticks(rotation=45)
+    plt.yticks(rotation=45)
+    plt.tight_layout()
+
+    # Mostrar gráfico
+    plt.show()
+
 
 def evaluate_model(name, y_true, y_pred):
     print(f"\n{name} - Evaluation Metrics\n" + "-"*40)
