@@ -13,6 +13,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from sklearn.linear_model import LogisticRegression
 from sklearn.naive_bayes import MultinomialNB
+from wordcloud import WordCloud
 
 
 #nltk.download('stopwords')
@@ -177,3 +178,38 @@ def get_top_words(model, vectorizer, top_n: int=10):
         raise ValueError("Modelo no soportado. Usa LogisticRegression o MultinomialNB")
 
     return top_spam, top_ham
+
+def plot_wordclouds(top_spam, top_ham, 
+                    max_words=100, 
+                    width=1000, height=800):
+    
+    # Crear diccionarios palabra→peso
+    # Detectamos el nombre de la columna de peso
+    col_peso = 'weight' if 'weight' in top_spam.columns else 'diff'
+    freqs_spam = dict(zip(top_spam['word'], top_spam[col_peso]))
+    freqs_ham  = dict(zip(top_ham ['word'], top_ham [col_peso]))
+    
+    # Configurar figura con dos subplots
+    fig, axes = plt.subplots(1, 2, figsize=(width/100, height/100))
+    
+    # Nube de spam
+    wc_spam = WordCloud(max_words=max_words,
+                        background_color='white',
+                        colormap='Dark2',
+                        width=width, height=height)
+    wc_spam.generate_from_frequencies(freqs_spam)
+    axes[0].imshow(wc_spam, interpolation='bilinear')
+    axes[0].set_title("Palabras asociadas a SPAM", fontsize=12)
+    axes[0].axis("off")
+    
+    # Nube de ham
+    wc_ham = WordCloud(max_words=max_words,
+                       background_color='white',
+                       width=width, height=height)
+    wc_ham.generate_from_frequencies(freqs_ham)
+    axes[1].imshow(wc_ham, interpolation='bilinear')
+    axes[1].set_title("Palabras asociadas a NO SPAM", fontsize=12)
+    axes[1].axis("off")
+    
+    plt.tight_layout()
+    plt.show()
