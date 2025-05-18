@@ -11,6 +11,8 @@ from nltk import pos_tag
 from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
 import seaborn as sns
 import matplotlib.pyplot as plt
+from sklearn.linear_model import LogisticRegression
+from sklearn.naive_bayes import MultinomialNB
 
 
 #nltk.download('stopwords')
@@ -18,6 +20,7 @@ import matplotlib.pyplot as plt
 #nltk.download('punkt')
 #nltk.download('averaged_perceptron_tagger')
 
+## NLP
 lemmatizer = WordNetLemmatizer()
 
 def translate_pos(tag):
@@ -59,7 +62,7 @@ def lemmatize(tokens):
     )
     return lemmas
 
-def common_words(series: pd.Series, top_n: int = 20) -> None:
+def get_common_words(series: pd.Series, top_n: int = 20) -> None:
 
     all_words = series.explode()
 
@@ -80,7 +83,7 @@ def common_words(series: pd.Series, top_n: int = 20) -> None:
     plt.ylabel('Palabra')
     plt.show()
 
-def common_words_by_label(df, col: str, top_n: int = 20) -> None:
+def get_common_words_by_label(df, col: str, top_n: int = 20) -> None:
     # Filtramos los datos por etiqueta
     ham_words = df[df['label'] == 'ham'][col].explode()
     spam_words = df[df['label'] == 'spam'][col].explode()
@@ -117,21 +120,27 @@ def common_words_by_label(df, col: str, top_n: int = 20) -> None:
     plt.show()
 
 
-def confusion_matrix_plot(y_test, y_pred) -> None:
+##MODELOS
+
+def confusion_matrix_plot(y_test, y_pred, name = "Modelo") -> None:
     cm = confusion_matrix(y_test, y_pred)
 
     plt.figure(figsize=(6, 5))
-    sns.heatmap(cm, 
-            annot=True, 
-            fmt='d', 
-            cmap='Blues',
-            xticklabels=['Ham', 'Spam'],
-            yticklabels=['Ham', 'Spam'])
+    sns.heatmap(
+        cm,
+        annot=True,
+        fmt='d',
+        cmap='Blues',
+        xticklabels=['Ham', 'Spam'],
+        yticklabels=['Ham', 'Spam'],
+        cbar=False,
+        annot_kws={"size": 20}
+    )
 
     # Añadir detalles
-    plt.title('Matriz de Confusión', fontsize=14)
-    plt.xlabel('Predicción', fontsize=12)
-    plt.ylabel('Real', fontsize=12)
+    plt.title(f'Matriz de Confusión {name}', fontsize=14)
+    plt.xlabel('Predicción', fontsize=14)
+    plt.ylabel('Real', fontsize=14)
     plt.xticks(rotation=45)
     plt.yticks(rotation=45)
     plt.tight_layout()
@@ -139,18 +148,32 @@ def confusion_matrix_plot(y_test, y_pred) -> None:
     # Mostrar gráfico
     plt.show()
 
+def get_top_words(model, vectorizer, top_n: int=10):
+    feature_names = vectorizer.get_feature_names_out()
 
-def evaluate_model(name, y_true, y_pred):
-    print(f"\n{name} - Evaluation Metrics\n" + "-"*40)
-    print("Accuracy:", round(accuracy_score(y_true, y_pred), 4))
-    print("\nClassification Report:")
-    print(classification_report(y_true, y_pred, target_names=["ham", "spam"]))
+    if isinstance(model, LogisticRegression):
+        # Para Regresión Logística: usamos coef_
+        coefficients = model.coef_[0]
+        coef_df = pd.DataFrame({'word': feature_names, 'weight': coefficients})
+        top_spam = coef_df.sort_values(by='weight', ascending=False).head(top_n)
+        top_ham = coef_df.sort_values(by='weight').head(top_n)
 
-    cm = confusion_matrix(y_true, y_pred)
-    plt.figure(figsize=(5,4))
-    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=["ham", "spam"], yticklabels=["ham", "spam"])
-    plt.title(f"{name} - Confusion Matrix")
-    plt.xlabel("Predicted Label")
-    plt.ylabel("True Label")
-    plt.tight_layout()
-    plt.show()
+    elif isinstance(model, MultinomialNB):
+        # Para MultinomialNB: usamos feature_log_prob_
+        log_probs = model.feature_log_prob_
+        spam_log_prob = log_probs[1, :]
+        ham_log_prob = log_probs[0, :]
+        # La diferencia de la probabilidad de que una palaba sea spam o ham indicará a que se asocia más la palabra
+        diff_log_prob = spam_log_prob - ham_log_prob
+        
+        coef_df = pd.DataFrame({
+            'word': feature_names,
+            'diff': diff_log_prob
+        })
+        top_spam = coef_df.sort_values(by='diff', ascending=False).head(top_n)
+        top_ham = coef_df.sort_values(by='diff').head(top_n)
+    
+    else:
+        raise ValueError("Modelo no soportado. Usa LogisticRegression o MultinomialNB")
+
+    return top_spam, top_ham
